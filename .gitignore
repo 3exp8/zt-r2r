@@ -1,0 +1,6 @@
+*.beam
+*.swp
+.rebar
+rebar.lock
+_build/*
+ebin/*.beam

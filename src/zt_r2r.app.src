@@ -1,0 +1,15 @@
+{application, zt_r2r,
+ [
+  {description, "Http client use shotgun to call Reminer Backend api"},
+  {vsn, "1"},
+  {modules, []},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+				  shotgun,
+                  lager
+                 ]},
+  {mod, { zt_r2r_app, []}},
+  {env, []}
+ ]}.
