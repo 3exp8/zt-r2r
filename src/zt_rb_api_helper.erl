@@ -12,9 +12,11 @@
 -export([
 			get_sms_request/4
 			,get_sms_request/5
-			,get_call_request/3
 			,get_email_request/5
 			,get_email_request/6
+			,get_call_access_token_request/1
+			,get_call_access_token_response_value/1
+			,get_call_request/4
 		]).
 
 create_header() ->
@@ -31,7 +33,7 @@ get_token_request() ->
 
 get_sms_request(Token, From, To, Text) ->
 	Header = #{
-		<<"Accept">> => <<"application/json">>, 
+		<<"Accept">> => <<"application/json">>,
 		<<"Content-Type">> => <<"application/json">>,
 		<<"Authorization">> => list_to_binary("Bearer "++Token)
 	},
@@ -46,7 +48,7 @@ get_sms_request(Token, From, To, Text) ->
 
 get_sms_request(Token, From, To, Text, Confirm) ->
 	Header = #{
-		<<"Accept">> => <<"application/json">>, 
+		<<"Accept">> => <<"application/json">>,
 		<<"Content-Type">> => <<"application/json">>,
 		<<"Authorization">> => list_to_binary("Bearer "++Token)
 	},
@@ -55,19 +57,9 @@ get_sms_request(Token, From, To, Text, Confirm) ->
 		{<<"from">>,From},
 		{<<"text">>,Text},
 		{<<"to">>,To},
-		{<<"callback_url">>,<<"">>}, 
+		{<<"callback_url">>,<<"">>},
 		{<<"confirm">>, Confirm}
 	]),
-	{Header,Body}.
-
-get_call_request(Token, To, CallInfo) ->
-	Header = #{
-		<<"Accept">> => <<"application/json">>, 
-		<<"Content-Type">> => <<"application/json">>,
-		<<"Authorization">> => list_to_binary("Bearer "++Token)
-	},
-	ParamCall = lists:append(CallInfo, [{<<"to">>,To}]),
-	Body = jsx:encode(ParamCall),
 	{Header,Body}.
 
 get_email_request(Token, From, To, Subject, Content) ->
@@ -101,3 +93,41 @@ get_response_value(Response,Key) ->
 get_response_value(Response, ParentKey, ChildKey) ->
 	ParentValue = get_response_value(Response,ParentKey),
 	proplists:get_value(ChildKey,ParentValue,<<>>).
+
+get_call_access_token_request(SecretKey) ->
+	Header = 	[
+		{<<"Accept">>,<<"application/json">>},
+		{<<"Content-Type">>,<<"application/json">>}
+	],
+	PrePayload = #{
+		secret_key => SecretKey
+	},
+	Payload = maps:to_list(PrePayload),
+	Body = jsx:encode(Payload),
+	{Header, Body}.
+
+get_call_access_token_response_value(Response) ->
+	ResBody = maps:get(body,Response),
+	ResDecode = jsx:decode(ResBody),
+	Content = proplists:get_value(<<"data">>, ResDecode),
+	ContentMap = maps:from_list(Content),
+	Token = maps:get(<<"access_token">>, ContentMap),
+	Token.
+
+get_call_request(Token, Caller, To, CallInfo) ->
+	Header =[
+		{<<"Accept">>,<<"application/json">>},
+		{<<"Content-Type">>,<<"application/json">>},
+		{<<"Authorization">>,Token}
+	],
+	PrePayload = #{
+		caller => Caller,
+		callees => [To],
+		params => #{
+			template_name => 'covidai_template_otp_1',
+			code_otp => CallInfo
+		}
+	},
+	Payload = maps:to_list(PrePayload),
+	Body = jsx:encode(Payload),
+	{Header, Body}.
